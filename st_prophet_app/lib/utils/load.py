@@ -20,6 +20,24 @@ def get_project_root() -> str:
     """
     return str(Path(__file__).parent.parent.parent)
 
+@st.cache(ttl=300)
+def download_toy_dataset(url: str) -> pd.DataFrame:
+    """Downloads a toy dataset from an external source and converts it into a pandas dataframe.
+
+    Parameters
+    ----------
+    url : str
+        Link to the toy dataset.
+
+    Returns
+    -------
+    pd.DataFrame
+        Loaded dataset.
+    """
+    download = requests.get(url).content
+    df = pd.read_csv(io.StringIO(download.decode("utf-8")))
+    return df
+
 
 @st.cache_data(ttl=300)
 def load_custom_config(config_file: io.BytesIO) -> Dict[Any, Any]:
@@ -100,3 +118,30 @@ def load_config(
     )
     config_readme = toml.load(Path(get_project_root()) / f"config/{config_readme_filename}")
     return dict(config_streamlit), dict(config_instructions), dict(config_readme)
+
+
+
+@st.cache(suppress_st_warning=True, ttl=300)
+def load_dataset(file: str, load_options: Dict[Any, Any]) -> pd.DataFrame:
+    """Loads dataset from user's file system as a pandas dataframe.
+
+    Parameters
+    ----------
+    file
+        Uploaded dataset file.
+    load_options : Dict
+        Dictionary containing separator information.
+
+    Returns
+    -------
+    pd.DataFrame
+        Loaded dataset.
+    """
+    try:
+        return pd.read_csv(file, sep=load_options["separator"])
+    except:
+        st.error(
+            "This file can't be converted into a dataframe. Please import a csv file with a valid separator."
+        )
+        st.stop()
+

@@ -21,6 +21,7 @@ from lib.inputs.dates import (
 )
 
 
+
 # Page config
 st.set_page_config(page_title="Prophet", layout="wide")
 
@@ -43,23 +44,41 @@ st.sidebar.image(load_image("prophet_logo.PNG"), use_column_width=True)
 
 ##
 st.sidebar.title("1. Data")
-
+df = pd.DataFrame()
 # Load data
 with st.sidebar.expander("Dataset", expanded=True):
-    file = st.file_uploader(label="Upload a csv file", type="csv", help="dataset_upload", accept_multiple_files=False)
-    if file is not None:
-        df = pd.read_csv(file)
+    if st.checkbox(
+        "Load a dummy dataset", True, help=readme["tooltips"]["upload_choice"]
+    ):
+        with st.sidebar.expander("Defalut dataset", expanded=True):
+            # file = 'ApplicationMaxDailyTPS.xlsx'
+            file = "C:\\Users\\NH2395\\Desktop\\TS\\st_prophet_app\\lib\\inputs\\ApplicationMaxDailyTPS.xlsx"
+            df = pd.read_excel(file)
+            if df is None:
+                st.stop()
     else:
-        st.stop()
-        
+        if st.checkbox(
+            "Upload my own config file", False, help=readme["tooltips"]["custom_config_choice"]
+        ):
+            with st.sidebar.expander("Dataset", expanded=True):
+                file = st.file_uploader(label="Upload an Excel file",
+                type=["xlsx", "xls"],
+                help="Upload your Excel dataset",
+                accept_multiple_files=False)
+                
+                if file is not None:
+                    df = pd.read_excel(file)
+                else:
+                    st.stop()
+            
 # Column names
 if df is not None:
     with st.sidebar.expander("Columns", expanded=True):
         date_col = st.selectbox("Date column",sorted(df.columns))
         target_col = st.selectbox( "Target column", sorted(set(df.columns) - {date_col}) )
 
-st.sidebar.title("2. Modelling")
 
+st.sidebar.title("2. Modelling")
 
 # Prior scale
 with st.sidebar.expander("Prior scale", expanded=False):
@@ -87,7 +106,6 @@ evaluate = st.sidebar.checkbox(
     "Evaluate my model", value=True, help=readme["tooltips"]["choice_eval"]
 )
 
-
 if evaluate:
 
     # Split
@@ -103,9 +121,6 @@ if evaluate:
     # # Scope of evaluation
     # with st.sidebar.expander("Scope", expanded=False):
     #     eval = input_scope_eval(eval, use_cv, readme)
-
-
-
 
 
 # Launch training & forecast
@@ -125,17 +140,19 @@ if st.checkbox(
     model.fit(df)
     
 
-    st.sidebar.title("4. Forecast")
+st.sidebar.title("4. Forecast")
 
-    # Choose whether or not to do future forecasts
-    make_future_forecast = st.sidebar.checkbox(
-        "Make forecast on future dates", value=False, help=readme["tooltips"]["choice_forecast"]
-    )
+# Choose whether or not to do future forecasts
+make_future_forecast = st.sidebar.checkbox(
+    "Make forecast on future dates", value=False, help=readme["tooltips"]["choice_forecast"]
+)
 
-    if make_future_forecast:
-        future = model.make_future_dataframe(periods=30, freq='D')
-        forecast = model.predict(future)
-    else:
-        forecast = None
-        
-    st.write(forecast)
+forecast_days = 30
+if make_future_forecast:
+    future = model.make_future_dataframe(periods=forecast_days, freq='D')
+    forecast = model.predict(future)
+else:
+    forecast = None
+    
+st.write(forecast)
+    
