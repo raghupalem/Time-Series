@@ -4,7 +4,10 @@ import numpy as np
 import streamlit as st
 
 from prophet import Prophet
+from prophet.plot import plot_plotly, plot_components_plotly
+
 from prophet.diagnostics import cross_validation
+from sklearn.metrics import mean_absolute_error, mean_absolute_percentage_error, mean_squared_error
 
 from lib.utils.load import load_image, load_config
 from lib.inputs.params import (
@@ -122,6 +125,12 @@ if evaluate:
     # with st.sidebar.expander("Scope", expanded=False):
     #     eval = input_scope_eval(eval, use_cv, readme)
 
+st.sidebar.title("4. Forecast")
+
+# Choose whether or not to do future forecasts
+make_future_forecast = st.sidebar.checkbox(
+    "Make forecast on future dates", value=False, help=readme["tooltips"]["choice_forecast"]
+)
 
 # Launch training & forecast
 if st.checkbox(
@@ -139,13 +148,41 @@ if st.checkbox(
     model = Prophet()
     model.fit(df)
     
+    forecast_days = 30
+    future = model.make_future_dataframe(periods=forecast_days, freq='D')
+    forecast = model.predict(future)
+    # Visualizations
+    if evaluate | make_future_forecast:
+        st.write("# 1. Overview")
+        fig1 = plot_plotly( 
+        model,
+        forecast,
+        ylabel=target_col,
+        # changepoints=True,
+        # trend=True,
+        # uncertainty=bool_param,
+    )
+    st.plotly_chart(fig1)
+    
+    if evaluate:
+        st.write(
+            f'# 2. Evaluation of data'
+        )
+        fig2 = plot_components_plotly(model, forecast)
+        st.plotly_chart(fig2)
 
-st.sidebar.title("4. Forecast")
 
-# Choose whether or not to do future forecasts
-make_future_forecast = st.sidebar.checkbox(
-    "Make forecast on future dates", value=False, help=readme["tooltips"]["choice_forecast"]
-)
+        st.write("## Performance metrics")
+        y_true = df.y
+        y_pred = forecast.yhat[:df.shape[0]]
+        mae = mean_absolute_error(y_true=y_true, y_pred=y_pred)
+        mape = mean_absolute_percentage_error(y_true=y_true, y_pred=y_pred)
+
+        st.write("MAE: ", round(mae,2))
+        st.write("MAPE: ", round(mape,2))
+
+ 
+
 
 forecast_days = 30
 if make_future_forecast:
